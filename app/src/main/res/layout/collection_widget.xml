@@ -23,6 +23,7 @@
                 android:layout_gravity="center_vertical"
                 android:src="@mipmap/ic_launcher"/>
             <TextView
+                android:id="@+id/widget_header"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Widget Header"
@@ -35,6 +36,30 @@
                 android:paddingEnd="@dimen/widget_header_padding"
                 android:paddingRight="@dimen/widget_header_padding"/>
         </LinearLayout>
+        <LinearLayout
+            android:id="@+id/my_widget_layout_main"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="#aaDEDFDE"
+            android:orientation="horizontal"
+            android:paddingLeft="5dp"
+            android:paddingRight="5dp">
+            <Button
+              android:id="@+id/wifi_button_id"
+              android:layout_height="wrap_content"
+              android:layout_width="wrap_content"
+              android:text="@string/wifi_button" />
+            <Button
+              android:id="@+id/cellular_button_id"
+              android:layout_height="wrap_content"
+              android:layout_width="wrap_content"
+              android:text="@string/cellular_button" />
+            <Button
+              android:id="@+id/ap_button_id"
+              android:layout_height="wrap_content"
+              android:layout_width="wrap_content"
+              android:text="@string/ap_button" />
+          </LinearLayout>
         <ListView
             android:id="@+id/widget_list"
             android:layout_width="match_parent"

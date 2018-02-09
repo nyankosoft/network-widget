@@ -4,6 +4,8 @@ import android.content.Context;
 import android.content.Intent;
 import android.widget.RemoteViews;
 import android.widget.RemoteViewsService;
+import android.widget.Button;
+import android.view.View;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -26,6 +28,7 @@ public class WidgetDataProvider implements RemoteViewsService.RemoteViewsFactory
     @Override
     public void onCreate() {
         initData();
+
     }
 
     @Override
