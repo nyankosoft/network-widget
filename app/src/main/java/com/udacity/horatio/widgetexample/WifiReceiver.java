@@ -78,9 +78,17 @@ public class WifiReceiver extends BroadcastReceiver {
 
         @Override
         public int onStartCommand(Intent intent, int flags, int startId) {
+
+            // Calling getSystemService with Context.WIFI_SERVICE causes this error:
+            // Error: The WIFI_SERVICE must be looked up on the Application context or memory will leak
+            // on devices < Android N. Try changing  to .getApplicationContext()  [WifiManagerLeak]
             final WifiManager wifiManager = (WifiManager) getSystemService(Context.WIFI_SERVICE);
+            // This also causes the same error
+            //final WifiManager wifiManager = (WifiManager) getSystemService(getApplicationContext().WIFI_SERVICE);
+
             // Need to wait a bit for the SSID to get picked up;
             // if done immediately all we'll get is null
+            long delayInMilliseconds = 5000;
             new Handler().postDelayed(new Runnable() {
                 @Override
                 public void run() {
@@ -93,7 +101,7 @@ public class WifiReceiver extends BroadcastReceiver {
                     createNotification(ssid, mac);
                     stopSelf();
                 }
-            }, 5000);
+            }, delayInMilliseconds);
             return START_NOT_STICKY;
         }
 
