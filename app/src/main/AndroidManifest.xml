@@ -4,17 +4,14 @@
 
     <!-- Need this to get the wifi on/off state via WifiManager -->
     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE"/>
+    <uses-permission android:name="android.permission.CHANGE_WIFI_STATE"/>
+
+    <!-- Turn on/off mobile data -->
+    <!-- <uses-permission android:name="android.permission.MODIFY_PHONE_STATE"/> -->
 
     <!-- Is this needed to get the IP address of the device -->
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
-
-    <receiver android:name=".WifiReceiver" android:exported="false" >
-     <intent-filter>
-       <action android:name="android.net.wifi.WIFI_STATE_CHANGED" />
-     </intent-filter>
-    </receiver>
-    <service android:name=".WifiReceiver$WifiActiveService" android:exported="false" />
 
     <application
         android:allowBackup="true"
@@ -49,6 +46,15 @@
                 permission android.permission.BIND_REMOTEVIEWS -->
         <service android:name=".WidgetService"
             android:permission="android.permission.BIND_REMOTEVIEWS" />
+
+        <!-- Broadcast receiver for responding to wifi on/off state changes -->
+        <!-- https://gist.github.com/mjohnsullivan/1fec89187b1274dc256e -->
+        <receiver android:name=".WifiReceiver" android:exported="false" >
+          <intent-filter>
+            <action android:name="android.net.wifi.WIFI_STATE_CHANGED" />
+          </intent-filter>
+        </receiver>
+        <service android:name=".WifiReceiver$WifiActiveService" android:exported="false" />
 
     </application>
 
