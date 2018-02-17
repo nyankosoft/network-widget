@@ -10,16 +10,28 @@ import android.content.Intent;
 import android.os.Build;
 import android.support.annotation.NonNull;
 import android.widget.RemoteViews;
+import android.net.wifi.WifiInfo;
 import android.net.wifi.WifiManager;
 import android.net.wifi.WifiConfiguration;
 import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
 import android.provider.Settings;
 import android.view.View;
+import android.text.format.Formatter;
+import android.text.SpannableStringBuilder;
+import android.text.Spannable;
+import android.text.style.ForegroundColorSpan;
+import android.graphics.Color;
+import android.telephony.TelephonyManager;
 
 import java.lang.reflect.Method;
 import java.lang.reflect.InvocationTargetException;
+import java.lang.SuppressWarnings;
 import java.net.InetAddress;
+import java.net.NetworkInterface;
+import java.net.SocketException;
 import java.net.UnknownHostException;
+import java.util.Enumeration;
 //import com.udacity.horatio.widgetexample.WifiReceiver;
 
 /**
@@ -62,24 +74,41 @@ public class CollectionWidget extends AppWidgetProvider {
         collectionWidgetViews.setOnClickPendingIntent(R.id.ap_button_id, getPendingSelfIntent(context, ACCESS_POINT_BUTTON_CLICKED));
         appWidgetManager.updateAppWidget(myWidget, collectionWidgetViews);
 
-        // Show the current IP adddress in the header
-        //WifiManager wifi = (WifiManager)context.getSystemService(Context.WIFI_SERVICE);
-        //if(wifi != null) {
-        //}
-        String ipAddress = "?.?.?.?";
-        // try {
-        //   InetAddress localHost = InetAddress.getLocalHost();
-        //   ipAddress = localHost.getHostAddress();
-        // } catch(UnknownHostException e) {
-        //   ipAddress = e.getMessage();
-        // }
-        setRemoteViewText(context,R.id.widget_header,ipAddress);
+        updateConnectionInfoView(context);
 
         // There may be multiple widgets active, so update all of them
         for (int appWidgetId : appWidgetIds) {
             updateAppWidget(context, appWidgetManager, appWidgetId);
         }
         super.onUpdate(context, appWidgetManager, appWidgetIds);
+    }
+
+    public void updateConnectionInfoView(Context context) {
+        String ssid = "";
+        String ipAddress = "?.?.?.?";
+
+        String c = getConnectionType(context);
+        if(c.equals("wifi")) {
+            // Show the current IP adddress in the header
+            WifiManager wifi = (WifiManager)context.getSystemService(Context.WIFI_SERVICE);
+            if(wifi != null) {
+                //@SuppressWarnings("deprecation");
+                ipAddress = Formatter.formatIpAddress(wifi.getConnectionInfo().getIpAddress());
+                WifiInfo info = wifi.getConnectionInfo();
+                ssid = info.getSSID();
+            }
+        } else if(c.equals("mobile")) {
+            ipAddress = getMobileIpAddress(context);
+        } else {
+            ipAddress = "NO CONNECTION";
+        }
+        //try {
+        //  InetAddress localHost = InetAddress.getLocalHost();
+        //  ipAddress = localHost.getHostAddress();
+        //} catch(UnknownHostException e) {
+        //  ipAddress = e.getMessage();
+        //}
+        setRemoteViewText(context,R.id.widget_header,ipAddress + " - " + ssid);
     }
 
     @Override
@@ -127,47 +156,35 @@ public class CollectionWidget extends AppWidgetProvider {
 
         if(WIFI_BUTTON_CLICKED.equals(intent.getAction())) {
 
+            // Toggle wifi on/off
             WifiManager wifi = (WifiManager)context.getSystemService(Context.WIFI_SERVICE);
-            String wifiState = "?";
-            try {
-              if(wifi != null) {
-                  if(wifi.isWifiEnabled()) {
-                    wifiState = "ON";
-                  } else {
-                    wifiState = "OFF";
-                  }
-              }
-            } catch(Exception e) {
-              wifiState = e.getMessage();
+            if(wifi != null) {
+                boolean isEnabled = wifi.isWifiEnabled();
+                wifi.setWifiEnabled(!isEnabled);
             }
 
-            AppWidgetManager appWidgetManager = AppWidgetManager.getInstance(context);
+            // update the view (wifi button)
 
-            RemoteViews remoteViews = new RemoteViews(context.getPackageName(), R.layout.collection_widget);
-            ComponentName myWidget = new ComponentName(context, CollectionWidget.class);
+            updateWifiStateView(context);
 
-            counter += 1;
-            remoteViews.setTextViewText(R.id.wifi_button_id, "Wi-fi: " + wifiState);
-
-            appWidgetManager.updateAppWidget(myWidget, remoteViews);
 
         } else if(CELLULAR_BUTTON_CLICKED.equals(intent.getAction())) {
             String cellular = "*";
             int s = isMobileDataEnabled(context);
-            if(s==1){cellular = "ON";}
-            else if(s==0){cellular = "OFF";}
-            else if(s==-1){cellular = "!";}
-            else if(s==-2){cellular = "?";}
+            if(s==1){cellular = "[ON]";}
+            else if(s==0){cellular = "[OFF]";}
+            else if(s==-1){cellular = "[!]";}
+            else if(s==-2){cellular = "[???]";}
 
-            AppWidgetManager appWidgetManager = AppWidgetManager.getInstance(context);
+            // TelephonyManager telephony = (TelephonyManager)context.getSystemService(Context.TELEPHONY_SERVICE);
 
-            RemoteViews remoteViews = new RemoteViews(context.getPackageName(), R.layout.collection_widget);
-            ComponentName myWidget = new ComponentName(context, CollectionWidget.class);
+            // if(telephony != null) {
+            //     telephony.setMobi
+            // }
 
             counter += 1;
-            remoteViews.setTextViewText(R.id.cellular_button_id, "CELLULAR: " + s);
+            setRemoteViewText(context, R.id.cellular_button_id, "CELLULAR\n" + cellular);
 
-            appWidgetManager.updateAppWidget(myWidget, remoteViews);
         } else if(ACCESS_POINT_BUTTON_CLICKED.equals(intent.getAction())) {
             AppWidgetManager appWidgetManager = AppWidgetManager.getInstance(context);
 
@@ -181,12 +198,45 @@ public class CollectionWidget extends AppWidgetProvider {
         }
     }
 
-    private static void setRemoteViewText(Context context, int id, String text) {
+    private static void setRemoteViewText(Context context, int id, CharSequence text) {
       AppWidgetManager appWidgetManager = AppWidgetManager.getInstance(context);
       RemoteViews remoteViews = new RemoteViews(context.getPackageName(), R.layout.collection_widget);
       ComponentName myWidget = new ComponentName(context, CollectionWidget.class);
       remoteViews.setTextViewText(id,text);
       appWidgetManager.updateAppWidget(myWidget, remoteViews);
+    }
+
+    public void updateWifiStateView(Context context) {
+
+        WifiManager wifi = (WifiManager)context.getSystemService(Context.WIFI_SERVICE);
+        String wifiState = "Wi-fi\n[?]";
+        CharSequence text = null;
+        try {
+            if(wifi != null) {
+                if(wifi.isWifiEnabled()) {
+                    wifiState = "Wi-fi\n[ON]";
+                    final SpannableStringBuilder sb = new SpannableStringBuilder(wifiState);
+
+                    // Span to set text color to some RGB value
+                    final ForegroundColorSpan fcs = new ForegroundColorSpan(Color.rgb(58, 250, 58));
+
+                    // Set the text color for first 4 characters
+                    sb.setSpan(fcs, 6, 9, Spannable.SPAN_INCLUSIVE_INCLUSIVE);
+                    text = sb;
+                    //setRemoteViewText(context,R.id.wifi_button_id,sb);
+                    //return;
+                } else {
+                    wifiState = "Wi-fi\n[OFF]";
+                    text = wifiState;
+                }
+            }
+        } catch(Exception e) {
+            wifiState = e.getMessage();
+            text = wifiState;
+        }
+
+        counter += 1;
+        setRemoteViewText(context, R.id.wifi_button_id, text);
     }
 
     public int isMobileDataEnabled(Context context) {
@@ -215,11 +265,8 @@ public class CollectionWidget extends AppWidgetProvider {
                 return -6;
             }
         } catch (InvocationTargetException ite) {
-            AppWidgetManager appWidgetManager = AppWidgetManager.getInstance(context);
-            RemoteViews remoteViews = new RemoteViews(context.getPackageName(), R.layout.collection_widget);
-            ComponentName myWidget = new ComponentName(context, CollectionWidget.class);
-            remoteViews.setTextViewText(R.id.widget_header, ite.getMessage());
-            appWidgetManager.updateAppWidget(myWidget, remoteViews);
+            setRemoteViewText(context, R.id.widget_header, ite.getMessage());
+
             if (ite.getCause() instanceof NoSuchMethodException) {
                 return -7;
             } else if (ite.getCause() instanceof Exception) {
@@ -237,7 +284,34 @@ public class CollectionWidget extends AppWidgetProvider {
         return mobileDataEnabled ? 1 : 0;
     }
 
-    //check whether wifi hotspot on or off
+    /**
+     * Get the IP address of the cellular network
+     *
+     */
+    public String getMobileIpAddress(Context context) {
+        try {
+            for (Enumeration<NetworkInterface> en = NetworkInterface.getNetworkInterfaces(); en.hasMoreElements();) {
+                NetworkInterface intf = en.nextElement();
+                for (Enumeration<InetAddress> enumIpAddr = intf.getInetAddresses(); enumIpAddr.hasMoreElements();) {
+                    InetAddress inetAddress = enumIpAddr.nextElement();
+                    if (!inetAddress.isLoopbackAddress()) {
+                        return inetAddress.getHostAddress().toString();
+                        //Log.i("Here is the Address",ipAddress);
+                    }
+                }
+            }
+        } catch (SocketException ex) {
+
+        }
+
+        return "";
+    }
+
+    /**
+     * check whether wifi hotspot on or off
+     *
+     *
+     */
     public static boolean isApOn(Context context) {
       int s = getApState(context);
       if(s == 1) {
@@ -248,7 +322,10 @@ public class CollectionWidget extends AppWidgetProvider {
       }
     }
 
-    // Is there a way to get the 'turning on' state?
+    /**
+     *
+     * Is there a way to get the 'turning on' state?
+     */
     public static int getApState(Context context) {
         WifiManager wifimanager = (WifiManager)context.getSystemService(context.WIFI_SERVICE);
         try {
@@ -264,7 +341,10 @@ public class CollectionWidget extends AppWidgetProvider {
         //return -2;
     }
 
-    // toggle wifi hotspot on or off
+    /**
+     * toggle wifi hotspot on or off
+     *
+     */
     public static boolean configApState(Context context) {
         WifiManager wifimanager = (WifiManager) context.getSystemService(context.WIFI_SERVICE);
         WifiConfiguration wificonfiguration = null;
@@ -281,5 +361,21 @@ public class CollectionWidget extends AppWidgetProvider {
             e.printStackTrace();
         }
         return false;
+    }
+
+    public String getConnectionType(Context context) {
+        final ConnectivityManager connMgr = (ConnectivityManager)context.getSystemService(Context.CONNECTIVITY_SERVICE);
+        final android.net.NetworkInfo wifi = connMgr.getNetworkInfo(ConnectivityManager.TYPE_WIFI);
+        final android.net.NetworkInfo mobile = connMgr.getNetworkInfo(ConnectivityManager.TYPE_MOBILE);
+        if (wifi.isConnectedOrConnecting ()) {
+            //Toast.makeText(this, "Wifi", Toast.LENGTH_LONG).show();
+            return "wifi";
+        } else if (mobile.isConnectedOrConnecting ()) {
+            //Toast.makeText(this, "Mobile 3G ", Toast.LENGTH_LONG).show();
+            return "mobile";
+        } else {
+            //Toast.makeText(this, "No Network ", Toast.LENGTH_LONG).show();
+            return "none";
+        }
     }
 }
