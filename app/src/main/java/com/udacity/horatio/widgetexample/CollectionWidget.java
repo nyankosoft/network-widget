@@ -33,6 +33,8 @@ import java.net.SocketException;
 import java.net.UnknownHostException;
 import java.util.Enumeration;
 //import com.udacity.horatio.widgetexample.WifiReceiver;
+import com.udacity.horatio.widgetexample.ExternalIpFinder;
+import com.udacity.horatio.widgetexample.RemoteViewChanger;
 
 /**
  * Implementation of App Widget functionality.
@@ -43,7 +45,24 @@ public class CollectionWidget extends AppWidgetProvider {
     private static final String CELLULAR_BUTTON_CLICKED    = "CellularButtonClick";
     private static final String ACCESS_POINT_BUTTON_CLICKED    = "AccessPointButtonClick";
 
+    private static final String PUBLIC_IP_CLICKED    = "PublicIpClick";
+    private static final String LOCAL_IP_CLICKED    = "LocalIpClick";
+
     private static int counter = 0;
+
+    public class MyRemoteViewChanger extends RemoteViewChanger {
+
+        Context myContext;
+
+        MyRemoteViewChanger(Context c) {
+            myContext = c;
+        }
+
+        @Override
+        public void setText(int viewId, CharSequence text) {
+            setRemoteViewText(myContext, viewId, text);
+        }
+    }
 
     static void updateAppWidget(Context context, AppWidgetManager appWidgetManager,
                                 int appWidgetId) {
@@ -74,6 +93,11 @@ public class CollectionWidget extends AppWidgetProvider {
         collectionWidgetViews.setOnClickPendingIntent(R.id.ap_button_id, getPendingSelfIntent(context, ACCESS_POINT_BUTTON_CLICKED));
         appWidgetManager.updateAppWidget(myWidget, collectionWidgetViews);
 
+        collectionWidgetViews.setOnClickPendingIntent(R.id.public_ip_address, getPendingSelfIntent(context, PUBLIC_IP_CLICKED));
+        appWidgetManager.updateAppWidget(myWidget, collectionWidgetViews);
+        collectionWidgetViews.setOnClickPendingIntent(R.id.local_ip_address, getPendingSelfIntent(context, LOCAL_IP_CLICKED));
+        appWidgetManager.updateAppWidget(myWidget, collectionWidgetViews);
+
         updateConnectionInfoView(context);
 
         // There may be multiple widgets active, so update all of them
@@ -84,23 +108,47 @@ public class CollectionWidget extends AppWidgetProvider {
     }
 
     public void updateConnectionInfoView(Context context) {
-        String ssid = "";
-        String ipAddress = "?.?.?.?";
 
         String c = getConnectionType(context);
         if(c.equals("wifi")) {
             // Show the current IP adddress in the header
             WifiManager wifi = (WifiManager)context.getSystemService(Context.WIFI_SERVICE);
             if(wifi != null) {
-                //@SuppressWarnings("deprecation");
-                ipAddress = Formatter.formatIpAddress(wifi.getConnectionInfo().getIpAddress());
+
+                // Run an async task
+                new ExternalIpFinder(new MyRemoteViewChanger(context)).execute();
+                //ExternalIpFinder finder = new ExternalIpFinder();
+                //String publicIp = "12.23.34.45";//finder.getExternalIpAddress();
+                //setRemoteViewText(context,R.id.public_ip_address,publicIp);
+
                 WifiInfo info = wifi.getConnectionInfo();
-                ssid = info.getSSID();
+                String ssid = info.getSSID();
+                setRemoteViewText(context,R.id.ssid_or_carrier,ssid);
+
+                setRemoteViewText(context,R.id.line_separator,"|");
+
+                //@SuppressWarnings("deprecation");
+                String localIpAddress = "?.?.?.?";
+                localIpAddress = Formatter.formatIpAddress(wifi.getConnectionInfo().getIpAddress());
+                setRemoteViewText(context,R.id.local_ip_address,localIpAddress);
             }
         } else if(c.equals("mobile")) {
-            ipAddress = getMobileIpAddress(context);
+            String ipAddress = getMobileIpAddress(context);
+            setRemoteViewText(context,R.id.public_ip_address,ipAddress);
+
+            String carrierName = "?#$%?";
+            TelephonyManager manager = (TelephonyManager)context.getSystemService(Context.TELEPHONY_SERVICE);
+            if(manager != null) {
+                carrierName = manager.getNetworkOperatorName();
+                setRemoteViewText(context,R.id.ssid_or_carrier,carrierName);
+            }
+            setRemoteViewText(context,R.id.line_separator,"");
+            setRemoteViewText(context,R.id.local_ip_address,"");
         } else {
-            ipAddress = "NO CONNECTION";
+            setRemoteViewText(context,R.id.public_ip_address,"NO CONNECTION");
+            setRemoteViewText(context,R.id.ssid_or_carrier,"");
+            setRemoteViewText(context,R.id.line_separator,"");
+            setRemoteViewText(context,R.id.local_ip_address,"");
         }
         //try {
         //  InetAddress localHost = InetAddress.getLocalHost();
@@ -108,7 +156,6 @@ public class CollectionWidget extends AppWidgetProvider {
         //} catch(UnknownHostException e) {
         //  ipAddress = e.getMessage();
         //}
-        setRemoteViewText(context,R.id.widget_header,ipAddress + " - " + ssid);
     }
 
     @Override
@@ -169,32 +216,15 @@ public class CollectionWidget extends AppWidgetProvider {
 
 
         } else if(CELLULAR_BUTTON_CLICKED.equals(intent.getAction())) {
-            String cellular = "*";
-            int s = isMobileDataEnabled(context);
-            if(s==1){cellular = "[ON]";}
-            else if(s==0){cellular = "[OFF]";}
-            else if(s==-1){cellular = "[!]";}
-            else if(s==-2){cellular = "[???]";}
 
-            // TelephonyManager telephony = (TelephonyManager)context.getSystemService(Context.TELEPHONY_SERVICE);
-
-            // if(telephony != null) {
-            //     telephony.setMobi
-            // }
-
-            counter += 1;
-            setRemoteViewText(context, R.id.cellular_button_id, "CELLULAR\n" + cellular);
+            updateCellularStatusView(context);
 
         } else if(ACCESS_POINT_BUTTON_CLICKED.equals(intent.getAction())) {
-            AppWidgetManager appWidgetManager = AppWidgetManager.getInstance(context);
-
-            RemoteViews remoteViews = new RemoteViews(context.getPackageName(), R.layout.collection_widget);
-            ComponentName myWidget = new ComponentName(context, CollectionWidget.class);
-
-            counter += 1;
-            remoteViews.setTextViewText(R.id.ap_button_id, "AP:" + getApState(context));
-
-            appWidgetManager.updateAppWidget(myWidget, remoteViews);
+            updateAccessPointStatusView(context);
+        } else if(PUBLIC_IP_CLICKED.equals(intent.getAction())) {
+            updateWifiStateView(context);
+            updateCellularStatusView(context);
+            updateAccessPointStatusView(context);
         }
     }
 
@@ -239,6 +269,38 @@ public class CollectionWidget extends AppWidgetProvider {
         setRemoteViewText(context, R.id.wifi_button_id, text);
     }
 
+    public void updateCellularStatusView(Context context) {
+
+        String cellular = "*";
+        int s = isMobileDataEnabled(context);
+        if(s==1){cellular = "[ON]";}
+        else if(s==0){cellular = "[OFF]";}
+        else if(s==-1){cellular = "[!]";}
+        else if(s==-2){cellular = "[???]";}
+
+        // TelephonyManager telephony = (TelephonyManager)context.getSystemService(Context.TELEPHONY_SERVICE);
+
+        // if(telephony != null) {
+        //     telephony.setMobi
+        // }
+
+        counter += 1;
+        setRemoteViewText(context, R.id.cellular_button_id, "MOBILE\n" + cellular);
+    }
+
+    public void updateAccessPointStatusView(Context context) {
+        AppWidgetManager appWidgetManager = AppWidgetManager.getInstance(context);
+
+        RemoteViews remoteViews = new RemoteViews(context.getPackageName(), R.layout.collection_widget);
+        ComponentName myWidget = new ComponentName(context, CollectionWidget.class);
+
+        counter += 1;
+        String apState = (getApState(context) == 1) ? "[ON]" : "[OFF]";
+        remoteViews.setTextViewText(R.id.ap_button_id, "AP\n" + apState);
+
+        appWidgetManager.updateAppWidget(myWidget, remoteViews);
+    }
+
     public int isMobileDataEnabled(Context context) {
         boolean mobileDataEnabled = false; // Assume disabled
         ConnectivityManager cm = (ConnectivityManager)context.getSystemService(Context.CONNECTIVITY_SERVICE);
@@ -265,7 +327,7 @@ public class CollectionWidget extends AppWidgetProvider {
                 return -6;
             }
         } catch (InvocationTargetException ite) {
-            setRemoteViewText(context, R.id.widget_header, ite.getMessage());
+            setRemoteViewText(context, R.id.local_ip_address, ite.getMessage());
 
             if (ite.getCause() instanceof NoSuchMethodException) {
                 return -7;
@@ -335,7 +397,7 @@ public class CollectionWidget extends AppWidgetProvider {
             return isOn ? 1 : 0;
         }
         catch(Exception e) {
-          setRemoteViewText(context,R.id.widget_header,e.getMessage());
+          setRemoteViewText(context,R.id.local_ip_address,e.getMessage());
           return -1;
         }
         //return -2;

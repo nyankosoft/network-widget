@@ -3,6 +3,6 @@
     <string name="appwidget_text">EXAMPLE</string>
     <string name="add_widget">Add widget</string>
     <string name="wifi_button">Wi-Fi\n[?]</string>
-    <string name="cellular_button">CELLULAR\n[?]</string>
+    <string name="cellular_button">MOBILE\n[?]</string>
     <string name="ap_button">AP\n[?]</string>
 </resources>
