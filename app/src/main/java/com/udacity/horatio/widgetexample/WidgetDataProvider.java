@@ -41,17 +41,21 @@ public class WidgetDataProvider implements RemoteViewsService.RemoteViewsFactory
 
     }
 
+    // Neither getCount nor getViewAt are called anywhere in the example,
+    // meaning that they are called by the system somehow.
+
     @Override
     public int getCount() {
-        return mCollection.size();
+        return 0;//mCollection.size();
     }
 
     @Override
     public RemoteViews getViewAt(int position) {
-        RemoteViews view = new RemoteViews(mContext.getPackageName(),
-                android.R.layout.simple_list_item_1);
-        view.setTextViewText(android.R.id.text1, mCollection.get(position));
-        return view;
+        // RemoteViews view = new RemoteViews(mContext.getPackageName(),
+        //         android.R.layout.simple_list_item_1);
+        // view.setTextViewText(android.R.id.text1, mCollection.get(position));
+        // return view;
+        return null;
     }
 
     @Override
@@ -75,10 +79,10 @@ public class WidgetDataProvider implements RemoteViewsService.RemoteViewsFactory
     }
 
     private void initData() {
-        mCollection.clear();
-        for (int i = 1; i <= 10; i++) {
-            mCollection.add("ListView item " + i);
-        }
+        // mCollection.clear();
+        // for (int i = 1; i <= 10; i++) {
+        //     mCollection.add("ListView item " + i);
+        // }
     }
 
 }

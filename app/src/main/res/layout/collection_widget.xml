@@ -43,7 +43,8 @@
             android:background="#aaDEDFDE"
             android:orientation="horizontal"
             android:paddingLeft="5dp"
-            android:paddingRight="5dp">
+            android:paddingRight="5dp"
+            android:textAllCaps="false">
             <Button
               android:id="@+id/wifi_button_id"
               android:layout_height="wrap_content"
@@ -60,11 +61,11 @@
               android:layout_width="wrap_content"
               android:text="@string/ap_button" />
           </LinearLayout>
-        <ListView
+        <!--<ListView
             android:id="@+id/widget_list"
             android:layout_width="match_parent"
             android:layout_height="match_parent">
-        </ListView>
+        </ListView>-->
     </LinearLayout>
 
 </FrameLayout>
