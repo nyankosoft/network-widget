@@ -1,5 +1,10 @@
-# Widget Example in Android
+# Network Widget
 
-This app demonstrates how to create a collection view widget to display a simple list of strings.
+## The Goal
 
-[This webcast goes through this example code for the Android Developer Nanodegree](https://www.youtube.com/watch?v=eKANzCs2pWM&feature=youtu.be).
+The Goal is to provide a widget with the following functions:
+
+- Displays the on/off status of these features on home screen in a compact fashion
+  - Wi-Fi on/off status
+  - Cellular Data on/off
+  - Mobile hotspot (tethering) on/off
